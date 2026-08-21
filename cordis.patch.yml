@@ -1,0 +1,4 @@
+# Подключение локальной LLM в профиль DeepSeek Harness Web.
+- insert:
+    - id: local-llm
+      name: dsh-local-llm
