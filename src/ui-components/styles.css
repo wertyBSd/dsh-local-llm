@@ -336,6 +336,15 @@
   font-size: 14px;
 }
 
+.model-capabilities {
+  display: inline-flex;
+  gap: 7px;
+  margin: 0 12px;
+  color: #cdd6f4;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
 .btn-delete {
   padding: 5px 15px;
   background: #f38ba8;

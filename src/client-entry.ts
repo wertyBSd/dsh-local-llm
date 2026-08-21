@@ -32,6 +32,12 @@ type ServerStatus = {
 
 type ServerBuild = 'auto' | 'cuda' | 'cpu'
 
+type ModelCapabilities = {
+  contextSize: number
+  tools: boolean
+  vision: boolean
+}
+
 type Locale = 'en' | 'ru' | 'zh' | 'fr' | 'es' | 'it' | 'pl' | 'de' | 'hi' | 'ja'
 
 const translations: Record<Locale, Record<string, string>> = { en, ru, zh, fr, es, it, pl, de, hi, ja }
@@ -53,6 +59,13 @@ function modelContextSize(modelName: string): number {
   if (name.includes('tinyllama')) return 2048
   if (name.includes('phi-2') || name.includes('phi-3') || name.includes('phi-4')) return 8192
   return 16384
+}
+
+function modelCapabilities(modelName: string): ModelCapabilities {
+  const name = modelName.toLowerCase()
+  if (name.includes('tinyllama')) return { contextSize: 2048, tools: false, vision: false }
+  if (name.includes('phi-2') || name.includes('phi-3') || name.includes('phi-4')) return { contextSize: 8192, tools: true, vision: false }
+  return { contextSize: 16384, tools: true, vision: false }
 }
 
 async function responseError(response: Response, fallback: string): Promise<Error> {
@@ -395,7 +408,11 @@ function createClientPlugin(moduleRequire: ModuleRequire) {
               onClick: () => setSelectedModel(model.name),
               title: selectedModel === model.name ? t('selectedModel') : t('selectModel')
             }, `${selectedModel === model.name ? '● ' : ''}${model.name}`),
-            React.createElement('span', { className: 'model-size' }, `${t('modelContext', { value: String(modelContextSize(model.name)) })} · ${(model.size / (1024 * 1024 * 1024)).toFixed(2)} GB`),
+            React.createElement('span', { className: 'model-capabilities', 'aria-label': t('modelCapabilities') },
+              React.createElement('span', { title: t('contextCapability') }, `◫ ${modelContextSize(model.name)}`),
+              React.createElement('span', { title: t('toolsCapability') }, modelCapabilities(model.name).tools ? '🛠' : '⊘'),
+              React.createElement('span', { title: t('visionCapability') }, modelCapabilities(model.name).vision ? '◉' : '⊘')),
+            React.createElement('span', { className: 'model-size' }, `${(model.size / (1024 * 1024 * 1024)).toFixed(2)} GB`),
             React.createElement('button', { onClick: () => void handleDelete(model.name), className: 'btn-delete' }, `🗑️ ${t('delete')}`))))
       )
     )

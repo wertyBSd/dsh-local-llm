@@ -151,8 +151,33 @@ function estimateTokens(messages: Array<{ role: string; content: string }>, tool
   return Math.ceil((messageText.length + JSON.stringify(tools).length) / 4)
 }
 
-function modelContextLimit(model: string): number | undefined {
-  return model.toLowerCase().includes('tinyllama') ? 2048 : undefined
+function modelCapabilities(model: string): { contextSize: number; tools: boolean; vision: boolean } {
+  const name = model.toLowerCase()
+  if (name.includes('tinyllama')) return { contextSize: 2048, tools: false, vision: false }
+  if (name.includes('phi-2') || name.includes('phi-3') || name.includes('phi-4')) {
+    return { contextSize: 8192, tools: true, vision: false }
+  }
+  return { contextSize: 16384, tools: true, vision: false }
+}
+
+function fitMessagesToContext(messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>, contextSize: number): Array<{ role: 'system' | 'user' | 'assistant'; content: string }> {
+  const budget = Math.max(512, contextSize - 256)
+  const system = messages.find(message => message.role === 'system')
+  const recent = messages.filter(message => message !== system).reverse()
+  const selected: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = []
+  if (system) selected.push({ role: 'system', content: system.content.slice(0, 800) })
+  for (const message of recent) {
+    const candidate = [selected[0], ...selected.slice(1), message].filter(Boolean) as Array<{ role: 'system' | 'user' | 'assistant'; content: string }>
+    if (estimateTokens(candidate, []) <= budget) selected.push(message)
+    else break
+  }
+  const latest = messages[messages.length - 1]
+  if (latest && !selected.includes(latest)) {
+    const remainingCharacters = Math.max(256, (budget - estimateTokens(selected, [])) * 4)
+    selected.push({ ...latest, content: latest.content.slice(-remainingCharacters) })
+  }
+  const selectedMessages = selected.slice(1).reverse()
+  return system ? [selected[0], ...selectedMessages] : selectedMessages
 }
 
 async function waitForServerReady(runtimeUrl: string, signal?: AbortSignal): Promise<void> {
@@ -413,20 +438,17 @@ export function apply(ctx: PluginContext, config: Config) {
       const runtimeUrl = config.runtimeUrl || `http://127.0.0.1:${config.serverPort || 8080}`
       await waitForServerReady(runtimeUrl, options.signal)
       const serializedMessages = serializeMessages(options.messages, options.system)
-      const serializedTools = options.tools === undefined ? [] : serializeTools(options.tools)
-      const contextLimit = modelContextLimit(selectedModel || '')
-      if (contextLimit !== undefined) {
-        const estimatedTokens = estimateTokens(serializedMessages, serializedTools)
-        if (estimatedTokens > contextLimit) {
-          throw new Error(`Model ${selectedModel} supports about ${contextLimit} context tokens, but this request needs about ${estimatedTokens}. Use a model with a larger context window; Harness instructions and tools were preserved.`)
-        }
-      }
+      const capabilities = modelCapabilities(selectedModel || '')
+      const serializedTools = capabilities.tools && options.tools !== undefined ? serializeTools(options.tools) : []
+      const requestMessages = estimateTokens(serializedMessages, serializedTools) > capabilities.contextSize
+        ? fitMessagesToContext(serializedMessages, capabilities.contextSize)
+        : serializedMessages
       const response = await fetch(`${runtimeUrl.replace(/\/$/, '')}/v1/chat/completions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
         body: JSON.stringify({
           model: selectedModel,
-          messages: serializedMessages,
+          messages: requestMessages,
           stream: true,
           ...(options.temperature === undefined ? {} : { temperature: options.temperature }),
           ...(options.maxTokens === undefined ? {} : { max_tokens: options.maxTokens }),
