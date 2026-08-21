@@ -30,6 +30,8 @@ type ServerStatus = {
   error?: string
 }
 
+type ServerBuild = 'auto' | 'cuda' | 'cpu'
+
 type Locale = 'en' | 'ru' | 'zh' | 'fr' | 'es' | 'it' | 'pl' | 'de' | 'hi' | 'ja'
 
 const translations: Record<Locale, Record<string, string>> = { en, ru, zh, fr, es, it, pl, de, hi, ja }
@@ -67,7 +69,10 @@ function createClientPlugin(moduleRequire: ModuleRequire) {
     const [server, setServer] = useState<ServerStatus | null>(null)
     const [serverBusy, setServerBusy] = useState(false)
     const [serverProgress, setServerProgress] = useState(0)
-    const [serverBuild, setServerBuild] = useState<'auto' | 'cuda' | 'cpu'>('auto')
+    const [serverBuild, setServerBuild] = useState<ServerBuild>(() => {
+      const stored = localStorage.getItem('dsh-local-llm-server-build')
+      return stored === 'cuda' || stored === 'cpu' ? stored : 'auto'
+    })
     const [modelSearch, setModelSearch] = useState('')
     const [customModelUrl, setCustomModelUrl] = useState('')
     const [selectedModel, setSelectedModel] = useState('mistral-7b-instruct-v0.3-Q4_K_M.gguf')
@@ -295,7 +300,7 @@ function createClientPlugin(moduleRequire: ModuleRequire) {
         }, visibleModels.length === 0
           ? React.createElement('option', { value: selectedModel }, t('allModelsDownloaded'))
           : visibleModels.map(([name, size]) => React.createElement('option', { key: name, value: name }, `${name} (${size})`))),
-        React.createElement('button', { onClick: handleDownload, disabled: downloading !== null || selectedModelDownloaded, className: 'btn-download' },
+        !selectedModelDownloaded && React.createElement('button', { onClick: handleDownload, disabled: downloading !== null, className: 'btn-download' },
           downloading === selectedModel ? `⏳ ${t('downloading')}` : `📥 ${t('download')}`)
       ),
       React.createElement('div', { className: 'custom-model' },
@@ -326,7 +331,11 @@ function createClientPlugin(moduleRequire: ModuleRequire) {
           id: 'dsh-local-llm-server-build',
           value: serverBuild,
           disabled: serverBusy || server?.running === true,
-          onChange: (event: React.ChangeEvent<HTMLSelectElement>) => setServerBuild(event.target.value as 'auto' | 'cuda' | 'cpu')
+          onChange: (event: React.ChangeEvent<HTMLSelectElement>) => {
+            const value = event.target.value as ServerBuild
+            setServerBuild(value)
+            localStorage.setItem('dsh-local-llm-server-build', value)
+          }
         },
         React.createElement('option', { value: 'auto' }, t('serverBuildAuto')),
         React.createElement('option', { value: 'cuda' }, t('serverBuildCuda')),

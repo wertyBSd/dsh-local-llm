@@ -107,7 +107,7 @@ Server parameters:
 - `serverUrl` - an optional direct server archive URL. If empty, a compatible archive is selected from the latest GitHub release.
 - `serverBuild` - selects the runtime build: `auto` prefers CUDA and falls back to CPU, `cuda` requires a CUDA archive, and `cpu` forces a non-CUDA archive. Defaults to `auto`.
 
-The model manager includes a server build selector. Stop the server before switching builds, choose `CUDA`, `CPU`, or `Automatic`, and click `Install selected build`. Switching from one installed build to another replaces the runtime files in `serverDir`.
+The model manager includes a server build selector. Stop the server before switching builds, choose `CUDA`, `CPU`, or `Automatic`, and click `Install selected build`. The selected mode is persisted in the browser, and the installed mode is recorded in `server-build.json` inside `serverDir`, so the choice survives Harness restarts. Switching from one installed build to another replaces the runtime files in `serverDir`.
 - `serverPort` - the `llama-server` port. Defaults to `8080`.
 - `contextSize` - the minimum context size in tokens. Harness system instructions and tools may require a larger value; the plugin never starts the managed server below `8192` tokens.
 - `autoContextSize` - when enabled, compact models use at least `8192` tokens and other models use at least `16384`; the configured `contextSize` remains the lower bound.

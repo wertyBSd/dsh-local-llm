@@ -6,6 +6,7 @@ import * as https from 'node:https'
 const GITHUB_RELEASES_URL = 'https://api.github.com/repos/ggml-org/llama.cpp/releases/latest'
 const MAX_REDIRECTS = 5
 const MIN_CONTEXT_SIZE = 8192
+const BUILD_METADATA_FILE = 'server-build.json'
 
 export interface ServerStatus {
   installed: boolean
@@ -55,6 +56,7 @@ export class ServerManager {
   getStatus(): ServerStatus {
     const executable = this.findExecutable()
     const running = this.process?.exitCode === null
+    const installedBuild = this.readInstalledBuild()
     return {
       installed: executable !== undefined,
       running,
@@ -62,7 +64,7 @@ export class ServerManager {
       ...(this.process?.pid === undefined ? {} : { pid: this.process.pid }),
       ...(this.readVersion() === undefined ? {} : { version: this.readVersion() }),
       ...(this.activeContextSize === undefined ? {} : { contextSize: this.activeContextSize }),
-      build: this.serverBuild,
+      build: installedBuild ?? this.serverBuild,
       ...(this.lastError === undefined ? {} : { error: this.lastError }),
     }
   }
@@ -87,6 +89,7 @@ export class ServerManager {
       if (this.findExecutable() === undefined) {
         throw new Error('The archive does not contain llama-server.exe. Choose a full llama.cpp binary archive')
       }
+      fs.writeFileSync(path.join(this.serverDir, BUILD_METADATA_FILE), JSON.stringify({ build }, null, 2))
       this.lastError = undefined
       return this.getStatus()
     } catch (error) {
@@ -189,6 +192,18 @@ export class ServerManager {
       }
     }
     return undefined
+  }
+
+  private readInstalledBuild(): ServerBuild | undefined {
+    const metadataPath = path.join(this.serverDir, BUILD_METADATA_FILE)
+    try {
+      const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8')) as { build?: unknown }
+      return metadata.build === 'auto' || metadata.build === 'cuda' || metadata.build === 'cpu'
+        ? metadata.build
+        : undefined
+    } catch {
+      return undefined
+    }
   }
 
   private readVersion(): string | undefined {
