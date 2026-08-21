@@ -5,7 +5,7 @@ import type { IncomingMessage, ServerResponse } from 'http'
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import { ModelDownloader } from './downloader.js'
-import { ServerManager } from './server-manager.js'
+import { ServerManager, type ServerBuild } from './server-manager.js'
 
 export const name = 'dsh-local-llm'
 export const inject = ['llm', 'webServer', 'settings']
@@ -16,6 +16,7 @@ export interface Config {
   runtimeUrl?: string
   serverDir?: string
   serverUrl?: string
+  serverBuild?: ServerBuild
   serverPort?: number
   contextSize?: number
   autoContextSize?: boolean
@@ -29,6 +30,7 @@ export const Config: z<Config> = z.object({
   runtimeUrl: z.string().default(''),
   serverDir: z.string().default('./llama-server'),
   serverUrl: z.string().default(''),
+  serverBuild: z.union([z.const('auto'), z.const('cuda'), z.const('cpu')]).default('auto'),
   serverPort: z.number().step(1).min(1).max(65535).default(8080),
   contextSize: z.number().step(1).min(2048).max(131072).default(8192),
   autoContextSize: z.boolean().default(true),
@@ -231,7 +233,8 @@ export function apply(ctx: PluginContext, config: Config) {
     config.serverPort || 8080,
     config.contextSize || 8192,
     config.serverUrl || '',
-    config.autoContextSize !== false
+    config.autoContextSize !== false,
+    config.serverBuild || 'auto'
   )
   
   const progressClients = new Set<ServerResponse>()

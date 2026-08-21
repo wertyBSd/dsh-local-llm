@@ -26,23 +26,27 @@ interface ReleaseInfo {
   assets: ReleaseAsset[]
 }
 
+export type ServerBuild = 'auto' | 'cuda' | 'cpu'
+
 export class ServerManager {
   private readonly serverDir: string
   private readonly port: number
   private readonly contextSize: number
   private readonly autoContextSize: boolean
   private readonly serverUrl: string
+  private readonly serverBuild: ServerBuild
   private process: ChildProcess | undefined
   private lastError: string | undefined
   private activeContextSize: number | undefined
   private activeModelPath: string | undefined
 
-  constructor(serverDir: string, port: number, contextSize = 8192, serverUrl = '', autoContextSize = true) {
+  constructor(serverDir: string, port: number, contextSize = 8192, serverUrl = '', autoContextSize = true, serverBuild: ServerBuild = 'auto') {
     this.serverDir = path.resolve(serverDir)
     this.port = port
     this.contextSize = contextSize
     this.serverUrl = serverUrl
     this.autoContextSize = autoContextSize
+    this.serverBuild = serverBuild
     fs.mkdirSync(this.serverDir, { recursive: true })
   }
 
@@ -146,8 +150,20 @@ export class ServerManager {
         && name.includes(`-${architecture}.`)
         && /\.(zip|tar\.gz|tgz)$/.test(name)
     })
-    const asset = candidates.find(candidate => candidate.name.toLowerCase().includes('cpu')) ?? candidates[0]
-    if (!asset) throw new Error(`No llama-server archive found for ${platform}/${architecture}`)
+
+    const cudaCandidates = candidates.filter(candidate => candidate.name.toLowerCase().includes('cuda'))
+    const cpuCandidates = candidates.filter(candidate => !candidate.name.toLowerCase().includes('cuda'))
+    const asset = this.serverBuild === 'cuda'
+      ? cudaCandidates[0]
+      : this.serverBuild === 'cpu'
+        ? cpuCandidates[0]
+        : cudaCandidates[0] ?? cpuCandidates[0]
+    if (!asset) {
+      if (this.serverBuild === 'cuda') {
+        throw new Error(`No CUDA llama-server archive found for ${platform}/${architecture}. Build llama.cpp with CUDA manually or choose the automatic/CPU build.`)
+      }
+      throw new Error(`No llama-server archive found for ${platform}/${architecture}`)
+    }
     return asset
   }
 

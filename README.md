@@ -105,6 +105,7 @@ Server parameters:
 
 - `serverDir` - the binary and log directory. Defaults to `./llama-server`.
 - `serverUrl` - an optional direct server archive URL. If empty, a compatible archive is selected from the latest GitHub release.
+- `serverBuild` - selects the runtime build: `auto` prefers CUDA and falls back to CPU, `cuda` requires a CUDA archive, and `cpu` forces a non-CUDA archive. Defaults to `auto`.
 - `serverPort` - the `llama-server` port. Defaults to `8080`.
 - `contextSize` - the minimum context size in tokens. Harness system instructions and tools may require a larger value.
 - `autoContextSize` - when enabled, compact models use at least `8192` tokens and other models use at least `16384`; the configured `contextSize` remains the lower bound.
