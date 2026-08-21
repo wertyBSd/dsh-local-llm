@@ -90,7 +90,9 @@ function createClientPlugin(moduleRequire: ModuleRequire) {
       ['TinyLlama-1.1B-Chat-v1.0-Q4_K_M.gguf', '0.7 GB']
     ]
     const visibleModels = availableModels.filter(([name]) =>
-      name.toLowerCase().includes(modelSearch.trim().toLowerCase()))
+      !models.some(model => model.name === name)
+      && name.toLowerCase().includes(modelSearch.trim().toLowerCase()))
+    const selectedModelDownloaded = models.some(model => model.name === selectedModel)
 
     const refreshModels = async () => {
       const response = await fetch('/api/local-llm/models')
@@ -153,6 +155,9 @@ function createClientPlugin(moduleRequire: ModuleRequire) {
       setServerBusy(true)
       setError(null)
       try {
+        if (!server?.running && !models.some(model => model.name === selectedModel)) {
+          throw new Error(t('modelNotDownloaded'))
+        }
         const response = await fetch(`/api/local-llm/server/${server?.running ? 'stop' : 'start'}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -283,8 +288,10 @@ function createClientPlugin(moduleRequire: ModuleRequire) {
         React.createElement('select', {
           value: selectedModel,
           onChange: (event: React.ChangeEvent<HTMLSelectElement>) => setSelectedModel(event.target.value)
-        }, visibleModels.map(([name, size]) => React.createElement('option', { key: name, value: name }, `${name} (${size})`))),
-        React.createElement('button', { onClick: handleDownload, disabled: downloading !== null, className: 'btn-download' },
+        }, visibleModels.length === 0
+          ? React.createElement('option', { value: selectedModel }, t('allModelsDownloaded'))
+          : visibleModels.map(([name, size]) => React.createElement('option', { key: name, value: name }, `${name} (${size})`))),
+        React.createElement('button', { onClick: handleDownload, disabled: downloading !== null || selectedModelDownloaded, className: 'btn-download' },
           downloading === selectedModel ? `⏳ ${t('downloading')}` : `📥 ${t('download')}`)
       ),
       React.createElement('div', { className: 'custom-model' },
@@ -325,7 +332,7 @@ function createClientPlugin(moduleRequire: ModuleRequire) {
           React.createElement('div', { className: 'progress-bar' },
             React.createElement('div', { className: 'progress-fill', style: { width: `${serverProgress}%` } }))),
         React.createElement('div', { className: 'server-buttons' },
-          React.createElement('button', { type: 'button', onClick: () => void installServer(), disabled: serverBusy || server?.running === true, className: 'btn-download' },
+          (!server?.installed || server.build !== serverBuild) && React.createElement('button', { type: 'button', onClick: () => void installServer(), disabled: serverBusy || server?.running === true, className: 'btn-download' },
             serverBusy ? `⏳ ${t('installingServer')}` : `⬇ ${server?.installed ? t('switchServerBuild') : t('installServer')}`),
           server?.installed && React.createElement('button', { type: 'button', onClick: () => void toggleServer(), disabled: serverBusy, className: server.running ? 'btn-stop' : 'btn-download' },
             server.running ? `■ ${t('stop')}` : `▶ ${t('start')}`))),
@@ -334,7 +341,12 @@ function createClientPlugin(moduleRequire: ModuleRequire) {
         models.length === 0
           ? React.createElement('p', { className: 'empty-message' }, t('noModels'))
           : React.createElement('ul', null, models.map(model => React.createElement('li', { key: model.name, className: 'model-item' },
-            React.createElement('span', { className: 'model-name' }, model.name),
+            React.createElement('button', {
+              type: 'button',
+              className: 'model-name model-select-button',
+              onClick: () => setSelectedModel(model.name),
+              title: selectedModel === model.name ? t('selectedModel') : t('selectModel')
+            }, `${selectedModel === model.name ? '● ' : ''}${model.name}`),
             React.createElement('span', { className: 'model-size' }, `${(model.size / (1024 * 1024 * 1024)).toFixed(2)} GB`),
             React.createElement('button', { onClick: () => void handleDelete(model.name), className: 'btn-delete' }, `🗑️ ${t('delete')}`))))
       )

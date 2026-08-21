@@ -321,6 +321,15 @@
   font-weight: 500;
 }
 
+.model-select-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
 .model-size {
   margin: 0 20px;
   color: #a6e3a1;
