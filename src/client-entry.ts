@@ -75,6 +75,8 @@ function createClientPlugin(moduleRequire: ModuleRequire) {
     })
     const [modelSearch, setModelSearch] = useState('')
     const [customModelUrl, setCustomModelUrl] = useState('')
+    const [customContextSize, setCustomContextSize] = useState('8192')
+    const [selectedContextSize, setSelectedContextSize] = useState<number | undefined>(undefined)
     const [selectedModel, setSelectedModel] = useState('mistral-7b-instruct-v0.3-Q4_K_M.gguf')
     const t = (key: string, values?: Record<string, string>) => text(locale, key, values)
     const changeLocale = (value: Locale) => {
@@ -170,7 +172,10 @@ function createClientPlugin(moduleRequire: ModuleRequire) {
         const response = await fetch(`/api/local-llm/server/${server?.running ? 'stop' : 'start'}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(server?.running ? {} : { model: selectedModel })
+          body: JSON.stringify(server?.running ? {} : {
+            model: selectedModel,
+            ...(selectedContextSize === undefined ? {} : { contextSize: selectedContextSize })
+          })
         })
         if (!response.ok) throw new Error(server?.running ? t('stopError') : t('startError'))
         const result = await response.json() as ServerStatus
@@ -219,6 +224,13 @@ function createClientPlugin(moduleRequire: ModuleRequire) {
         return
       }
       setSelectedModel(url)
+      const contextSize = Number(customContextSize)
+      if (!Number.isInteger(contextSize) || contextSize < 2048 || contextSize > 131072) {
+        setError(t('contextSizeError'))
+        return
+      }
+      setSelectedContextSize(contextSize)
+      localStorage.setItem(`dsh-local-llm-context:${url}`, String(contextSize))
       setCustomModelUrl('')
       void handleDownloadFor(url)
     }
@@ -296,7 +308,10 @@ function createClientPlugin(moduleRequire: ModuleRequire) {
         }),
         React.createElement('select', {
           value: selectedModel,
-          onChange: (event: React.ChangeEvent<HTMLSelectElement>) => setSelectedModel(event.target.value)
+          onChange: (event: React.ChangeEvent<HTMLSelectElement>) => {
+            setSelectedModel(event.target.value)
+            setSelectedContextSize(undefined)
+          }
         }, visibleModels.length === 0
           ? React.createElement('option', { value: selectedModel }, t('allModelsDownloaded'))
           : visibleModels.map(([name, size]) => React.createElement('option', { key: name, value: name }, `${name} (${size})`))),
@@ -310,6 +325,15 @@ function createClientPlugin(moduleRequire: ModuleRequire) {
           placeholder: t('directUrl'),
           'aria-label': t('directUrl'),
           onChange: (event: React.ChangeEvent<HTMLInputElement>) => setCustomModelUrl(event.target.value)
+        }),
+        React.createElement('input', {
+          type: 'number',
+          min: 2048,
+          max: 131072,
+          step: 1024,
+          value: customContextSize,
+          'aria-label': t('contextSize'),
+          onChange: (event: React.ChangeEvent<HTMLInputElement>) => setCustomContextSize(event.target.value)
         }),
         React.createElement('button', {
           type: 'button',

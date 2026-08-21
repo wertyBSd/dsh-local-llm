@@ -5,7 +5,7 @@ import * as https from 'node:https'
 
 const GITHUB_RELEASES_URL = 'https://api.github.com/repos/ggml-org/llama.cpp/releases/latest'
 const MAX_REDIRECTS = 5
-const MIN_CONTEXT_SIZE = 8192
+const MIN_CONTEXT_SIZE = 2048
 const BUILD_METADATA_FILE = 'server-build.json'
 
 export interface ServerStatus {
@@ -98,7 +98,7 @@ export class ServerManager {
     }
   }
 
-  start(modelPath: string): ServerStatus {
+  start(modelPath: string, requestedContextSize?: number): ServerStatus {
     if (this.process?.exitCode === null) {
       if (this.activeModelPath === modelPath) return this.getStatus()
       this.stop()
@@ -106,7 +106,7 @@ export class ServerManager {
     const executable = this.findExecutable()
     if (!executable) throw new Error('Download the llama-server runtime first')
     if (!fs.existsSync(modelPath)) throw new Error('Model file not found')
-    const contextSize = this.resolveContextSize(modelPath)
+    const contextSize = this.resolveContextSize(modelPath, requestedContextSize)
     this.activeContextSize = contextSize
     this.activeModelPath = modelPath
 
@@ -134,11 +134,13 @@ export class ServerManager {
     return this.getStatus()
   }
 
-  private resolveContextSize(modelPath: string): number {
-    if (!this.autoContextSize) return Math.max(this.contextSize, MIN_CONTEXT_SIZE)
+  private resolveContextSize(modelPath: string, requestedContextSize?: number): number {
     const modelName = path.basename(modelPath).toLowerCase()
-    const compactModels = ['tinyllama', 'phi-2', 'phi-3', 'phi-4']
-    const recommended = compactModels.some(name => modelName.includes(name)) ? 8192 : 16384
+    const modelLimit = modelName.includes('tinyllama') ? 2048 : undefined
+    if (modelLimit !== undefined) return Math.min(Math.max(requestedContextSize || modelLimit, MIN_CONTEXT_SIZE), modelLimit)
+    if (requestedContextSize !== undefined) return Math.max(requestedContextSize, MIN_CONTEXT_SIZE)
+    if (!this.autoContextSize) return Math.max(this.contextSize, MIN_CONTEXT_SIZE)
+    const recommended = ['phi-2', 'phi-3', 'phi-4'].some(name => modelName.includes(name)) ? 8192 : 16384
     return Math.max(this.contextSize, MIN_CONTEXT_SIZE, recommended)
   }
 

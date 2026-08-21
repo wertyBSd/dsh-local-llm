@@ -15,6 +15,8 @@
   "selectedModel": "選択中のモデル",
   "modelNotDownloaded": "サーバーを起動する前にダウンロード済みモデルを選択してください",
   "allModelsDownloaded": "すべての内蔵モデルはダウンロード済みです",
+  "contextSize": "コンテキストサイズ",
+  "contextSizeError": "コンテキストサイズは 2048 から 131072 の整数で指定してください",
   "running": "実行中",
   "installedStopped": "インストール済み、停止中",
   "notInstalled": "未インストール",

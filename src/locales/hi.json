@@ -15,6 +15,8 @@
   "selectedModel": "मॉडल चुना गया",
   "modelNotDownloaded": "सर्वर शुरू करने से पहले डाउनलोड किया हुआ मॉडल चुनें",
   "allModelsDownloaded": "सभी अंतर्निहित मॉडल डाउनलोड हो गए हैं",
+  "contextSize": "कॉन्टेक्स्ट आकार",
+  "contextSizeError": "कॉन्टेक्स्ट आकार 2048 और 131072 के बीच पूर्णांक होना चाहिए",
   "running": "चल रहा है",
   "installedStopped": "इंस्टॉल है, बंद है",
   "notInstalled": "इंस्टॉल नहीं है",

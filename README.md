@@ -16,6 +16,7 @@ A DeepSeek Harness plugin for managing local GGUF models and serving them throug
 - Follow HTTP redirects and clean up incomplete downloads.
 - Deduplicate concurrent downloads of the same model.
 - Automatically choose a suitable context size for the selected model.
+- Detect when TinyLlama cannot fit the Harness prompt before sending the request.
 - Provide an `on`/`off` server indicator in the sidebar footer.
 
 ## Requirements
@@ -110,11 +111,11 @@ Server parameters:
 The model manager includes a server build selector. Stop the server before switching builds, choose `CUDA`, `CPU`, or `Automatic`, and click `Install selected build`. The selected mode is persisted in the browser, and the installed mode is recorded in `server-build.json` inside `serverDir`, so the choice survives Harness restarts. Switching from one installed build to another replaces the runtime files in `serverDir`.
 - `serverPort` - the `llama-server` port. Defaults to `8080`.
 - `contextSize` - the minimum context size in tokens. Harness system instructions and tools may require a larger value; the plugin never starts the managed server below `8192` tokens.
-- `autoContextSize` - when enabled, compact models use at least `8192` tokens and other models use at least `16384`; the configured `contextSize` remains the lower bound.
+- `autoContextSize` - when enabled, regular models use at least `16384` tokens; TinyLlama is capped by its model limit of `2048` tokens.
 
 The server is restarted automatically when a different model is selected, so the new model's context size takes effect. The active context size is included in the server status. The server log is written to `llama-server/llama-server.log`.
 
-After changing the context settings or updating the plugin, stop and start the managed server once so the new `--ctx-size` value is applied. A server reporting `available context size (2048)` is an old process or an externally managed runtime, not the current plugin configuration.
+After changing the context settings or updating the plugin, stop and start the managed server once so the new `--ctx-size` value is applied. TinyLlama reports an available context of `2048` because that is its model limit. The adapter estimates request size and rejects oversized Harness prompts before sending them.
 
 ## Localization
 

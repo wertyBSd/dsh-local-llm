@@ -15,6 +15,8 @@
   "selectedModel": "Modelo seleccionado",
   "modelNotDownloaded": "Selecciona un modelo descargado antes de iniciar el servidor",
   "allModelsDownloaded": "Todos los modelos integrados están descargados",
+  "contextSize": "Tamaño del contexto",
+  "contextSizeError": "El tamaño del contexto debe ser un entero entre 2048 y 131072",
   "running": "En ejecución",
   "installedStopped": "Instalado, detenido",
   "notInstalled": "No instalado",

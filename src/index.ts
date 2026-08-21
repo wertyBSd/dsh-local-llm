@@ -146,6 +146,15 @@ function serializeTools(tools: unknown[]): Array<{ type: 'function'; function: R
   })
 }
 
+function estimateTokens(messages: Array<{ role: string; content: string }>, tools: unknown[]): number {
+  const messageText = messages.map(message => `${message.role}: ${message.content}`).join('\n')
+  return Math.ceil((messageText.length + JSON.stringify(tools).length) / 4)
+}
+
+function modelContextLimit(model: string): number | undefined {
+  return model.toLowerCase().includes('tinyllama') ? 2048 : undefined
+}
+
 async function waitForServerReady(runtimeUrl: string, signal?: AbortSignal): Promise<void> {
   const healthUrl = `${runtimeUrl.replace(/\/$/, '')}/health`
   for (let attempt = 0; attempt < 60; attempt++) {
@@ -334,9 +343,14 @@ export function apply(ctx: PluginContext, config: Config) {
 
   registerRoute('/api/local-llm/server/start', async (req, res) => {
     try {
-      const { model } = await readJson(req)
+      const body = await readJson(req)
+      const { model } = body
       if (typeof model !== 'string' || !model.trim()) throw new Error('A model is required to start the server')
-      sendJson(res, 200, server.start(downloader.getModelPath(model)))
+      const requestedContextSize = body.contextSize
+      if (requestedContextSize !== undefined && (typeof requestedContextSize !== 'number' || !Number.isInteger(requestedContextSize) || requestedContextSize < 2048 || requestedContextSize > 131072)) {
+        throw new Error('Model context size must be an integer between 2048 and 131072')
+      }
+      sendJson(res, 200, server.start(downloader.getModelPath(model), requestedContextSize as number | undefined))
     } catch (error) {
       sendJson(res, 200, {
         installed: server.getStatus().installed,
@@ -398,17 +412,26 @@ export function apply(ctx: PluginContext, config: Config) {
       }
       const runtimeUrl = config.runtimeUrl || `http://127.0.0.1:${config.serverPort || 8080}`
       await waitForServerReady(runtimeUrl, options.signal)
+      const serializedMessages = serializeMessages(options.messages, options.system)
+      const serializedTools = options.tools === undefined ? [] : serializeTools(options.tools)
+      const contextLimit = modelContextLimit(selectedModel || '')
+      if (contextLimit !== undefined) {
+        const estimatedTokens = estimateTokens(serializedMessages, serializedTools)
+        if (estimatedTokens > contextLimit) {
+          throw new Error(`Model ${selectedModel} supports about ${contextLimit} context tokens, but this request needs about ${estimatedTokens}. Use a model with a larger context window; Harness instructions and tools were preserved.`)
+        }
+      }
       const response = await fetch(`${runtimeUrl.replace(/\/$/, '')}/v1/chat/completions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
         body: JSON.stringify({
           model: selectedModel,
-          messages: serializeMessages(options.messages, options.system),
+          messages: serializedMessages,
           stream: true,
           ...(options.temperature === undefined ? {} : { temperature: options.temperature }),
           ...(options.maxTokens === undefined ? {} : { max_tokens: options.maxTokens }),
           ...(options.stop === undefined ? {} : { stop: options.stop }),
-          ...(options.tools === undefined ? {} : { tools: serializeTools(options.tools) })
+          ...(options.tools === undefined ? {} : { tools: serializedTools })
         }),
         signal: options.signal
       })
