@@ -97,7 +97,11 @@ function createClientPlugin(moduleRequire: ModuleRequire) {
     const refreshModels = async () => {
       const response = await fetch('/api/local-llm/models')
       if (!response.ok) throw new Error(t('modelsLoadError'))
-      setModels(await response.json() as ModelInfo[])
+      const downloadedModels = await response.json() as ModelInfo[]
+      setModels(downloadedModels)
+      if (downloadedModels.length > 0 && !downloadedModels.some(model => model.name === selectedModel)) {
+        setSelectedModel(downloadedModels[0].name)
+      }
     }
 
     useEffect(() => {
