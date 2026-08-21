@@ -347,7 +347,7 @@ function createClientPlugin(moduleRequire: ModuleRequire) {
         React.createElement('div', { className: 'server-buttons' },
           (!server?.installed || server.build !== serverBuild) && React.createElement('button', { type: 'button', onClick: () => void installServer(), disabled: serverBusy || server?.running === true, className: 'btn-download' },
             serverBusy ? `⏳ ${t('installingServer')}` : `⬇ ${server?.installed ? t('switchServerBuild') : t('installServer')}`),
-          server?.installed && React.createElement('button', { type: 'button', onClick: () => void toggleServer(), disabled: serverBusy, className: server.running ? 'btn-stop' : 'btn-download' },
+          server?.installed && (server.running || selectedModelDownloaded) && React.createElement('button', { type: 'button', onClick: () => void toggleServer(), disabled: serverBusy, className: server.running ? 'btn-stop' : 'btn-download' },
             server.running ? `■ ${t('stop')}` : `▶ ${t('start')}`))),
       React.createElement('div', { className: 'models-list' },
         React.createElement('h3', null, `📁 ${t('downloadedModels')}`),
