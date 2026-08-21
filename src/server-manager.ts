@@ -136,7 +136,13 @@ export class ServerManager {
 
   private resolveContextSize(modelPath: string, requestedContextSize?: number): number {
     const modelName = path.basename(modelPath).toLowerCase()
-    const modelLimit = modelName.includes('tinyllama') ? 2048 : undefined
+    const modelLimit = modelName.includes('tinyllama') ? 2048
+      : modelName.includes('meta-llama-3.1') ? 131072
+        : modelName.includes('phi-3.5') ? 131072
+          : modelName.includes('mistral-7b') || modelName.includes('qwen-2.5') ? 32768
+            : modelName.includes('llama-3-8b') || modelName.includes('gemma-2') ? 8192
+              : modelName.includes('deepseek-coder') || modelName.includes('starcoder2') ? 16384
+                : undefined
     if (modelLimit !== undefined) return Math.min(Math.max(requestedContextSize || modelLimit, MIN_CONTEXT_SIZE), modelLimit)
     if (requestedContextSize !== undefined) return Math.max(requestedContextSize, MIN_CONTEXT_SIZE)
     if (!this.autoContextSize) return Math.max(this.contextSize, MIN_CONTEXT_SIZE)
