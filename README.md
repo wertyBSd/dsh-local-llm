@@ -109,10 +109,12 @@ Server parameters:
 
 The model manager includes a server build selector. Stop the server before switching builds, choose `CUDA`, `CPU`, or `Automatic`, and click `Install selected build`. Switching from one installed build to another replaces the runtime files in `serverDir`.
 - `serverPort` - the `llama-server` port. Defaults to `8080`.
-- `contextSize` - the minimum context size in tokens. Harness system instructions and tools may require a larger value.
+- `contextSize` - the minimum context size in tokens. Harness system instructions and tools may require a larger value; the plugin never starts the managed server below `8192` tokens.
 - `autoContextSize` - when enabled, compact models use at least `8192` tokens and other models use at least `16384`; the configured `contextSize` remains the lower bound.
 
 The server is restarted automatically when a different model is selected, so the new model's context size takes effect. The active context size is included in the server status. The server log is written to `llama-server/llama-server.log`.
+
+After changing the context settings or updating the plugin, stop and start the managed server once so the new `--ctx-size` value is applied. A server reporting `available context size (2048)` is an old process or an externally managed runtime, not the current plugin configuration.
 
 ## Localization
 

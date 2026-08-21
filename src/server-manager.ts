@@ -5,6 +5,7 @@ import * as https from 'node:https'
 
 const GITHUB_RELEASES_URL = 'https://api.github.com/repos/ggml-org/llama.cpp/releases/latest'
 const MAX_REDIRECTS = 5
+const MIN_CONTEXT_SIZE = 8192
 
 export interface ServerStatus {
   installed: boolean
@@ -131,11 +132,11 @@ export class ServerManager {
   }
 
   private resolveContextSize(modelPath: string): number {
-    if (!this.autoContextSize) return this.contextSize
+    if (!this.autoContextSize) return Math.max(this.contextSize, MIN_CONTEXT_SIZE)
     const modelName = path.basename(modelPath).toLowerCase()
     const compactModels = ['tinyllama', 'phi-2', 'phi-3', 'phi-4']
     const recommended = compactModels.some(name => modelName.includes(name)) ? 8192 : 16384
-    return Math.max(this.contextSize, recommended)
+    return Math.max(this.contextSize, MIN_CONTEXT_SIZE, recommended)
   }
 
   stop(): ServerStatus {
