@@ -158,6 +158,7 @@
   display: flex;
   gap: 10px;
   margin-bottom: 20px;
+  align-items: center;
 }
 
 .custom-model .model-search {
@@ -342,6 +343,21 @@
   margin: 0 12px;
   color: #cdd6f4;
   font-size: 13px;
+  white-space: nowrap;
+}
+
+.model-capabilities span {
+  padding: 2px 5px;
+  border: 1px solid #585b70;
+  border-radius: 3px;
+  font-size: 10px;
+  letter-spacing: 0;
+}
+
+.context-size-hint {
+  align-self: center;
+  color: #a6adc8;
+  font-size: 12px;
   white-space: nowrap;
 }
 

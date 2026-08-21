@@ -346,7 +346,7 @@ function createClientPlugin(moduleRequire: ModuleRequire) {
           }
         }, visibleModels.length === 0
           ? React.createElement('option', { value: selectedModel }, t('allModelsDownloaded'))
-          : visibleModels.map(model => React.createElement('option', { key: model.name, value: model.name }, `${model.name} (${model.size}) · ◫ ${model.contextSize} · ${model.tools ? '🛠' : '⊘'}`))),
+          : visibleModels.map(model => React.createElement('option', { key: model.name, value: model.name }, `${model.name} (${model.size}) · Context ${model.contextSize} · ${model.tools ? 'Tools' : 'No tools'}`))),
         !selectedModelDownloaded && React.createElement('button', { onClick: handleDownload, disabled: downloading !== null, className: 'btn-download' },
           downloading === selectedModel ? `⏳ ${t('downloading')}` : `📥 ${t('download')}`)
       ),
@@ -418,9 +418,9 @@ function createClientPlugin(moduleRequire: ModuleRequire) {
               title: selectedModel === model.name ? t('selectedModel') : t('selectModel')
             }, `${selectedModel === model.name ? '● ' : ''}${model.name}`),
             React.createElement('span', { className: 'model-capabilities', 'aria-label': t('modelCapabilities') },
-              React.createElement('span', { title: t('contextCapability') }, `◫ ${modelContextSize(model.name)}`),
-              React.createElement('span', { title: t('toolsCapability') }, (availableModels.find(entry => entry.name === model.name)?.tools ?? modelCapabilities(model.name).tools) ? '🛠' : '⊘'),
-              React.createElement('span', { title: t('visionCapability') }, (availableModels.find(entry => entry.name === model.name)?.vision ?? modelCapabilities(model.name).vision) ? '◉' : '⊘')),
+              React.createElement('span', { title: t('contextCapability') }, `CTX ${modelContextSize(model.name)}`),
+              React.createElement('span', { title: t('toolsCapability') }, (availableModels.find(entry => entry.name === model.name)?.tools ?? modelCapabilities(model.name).tools) ? 'TOOLS' : 'NO TOOLS'),
+              React.createElement('span', { title: t('visionCapability') }, (availableModels.find(entry => entry.name === model.name)?.vision ?? modelCapabilities(model.name).vision) ? 'VISION' : 'NO VISION')),
             React.createElement('span', { className: 'model-size' }, `${(model.size / (1024 * 1024 * 1024)).toFixed(2)} GB`),
             React.createElement('button', { onClick: () => void handleDelete(model.name), className: 'btn-delete' }, `🗑️ ${t('delete')}`))))
       )
