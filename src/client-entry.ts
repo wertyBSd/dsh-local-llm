@@ -26,6 +26,7 @@ type ServerStatus = {
   running: boolean
   url: string
   pid?: number
+  build?: 'auto' | 'cuda' | 'cpu'
   error?: string
 }
 
@@ -66,6 +67,7 @@ function createClientPlugin(moduleRequire: ModuleRequire) {
     const [server, setServer] = useState<ServerStatus | null>(null)
     const [serverBusy, setServerBusy] = useState(false)
     const [serverProgress, setServerProgress] = useState(0)
+    const [serverBuild, setServerBuild] = useState<'auto' | 'cuda' | 'cpu'>('auto')
     const [modelSearch, setModelSearch] = useState('')
     const [customModelUrl, setCustomModelUrl] = useState('')
     const [selectedModel, setSelectedModel] = useState('mistral-7b-instruct-v0.3-Q4_K_M.gguf')
@@ -105,7 +107,9 @@ function createClientPlugin(moduleRequire: ModuleRequire) {
     const refreshServer = async () => {
       const response = await fetch('/api/local-llm/server/status')
       if (!response.ok) throw new Error(t('serverLoadError'))
-      setServer(await response.json() as ServerStatus)
+      const result = await response.json() as ServerStatus
+      setServer(result)
+      if (result.build) setServerBuild(result.build)
     }
 
     useEffect(() => {
@@ -131,7 +135,7 @@ function createClientPlugin(moduleRequire: ModuleRequire) {
         const response = await fetch('/api/local-llm/server/install', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: '{}'
+          body: JSON.stringify({ build: serverBuild })
         })
         if (!response.ok) throw new Error(t('serverDownloadError'))
         const result = await response.json() as ServerStatus
@@ -306,13 +310,23 @@ function createClientPlugin(moduleRequire: ModuleRequire) {
           React.createElement('strong', null, t('server')),
           React.createElement('span', { className: server?.running ? 'server-online' : 'server-offline' },
             server?.running ? `${t('running')}: ${server.url}` : server?.installed ? t('installedStopped') : t('notInstalled'))),
+        React.createElement('label', { className: 'server-build-picker', htmlFor: 'dsh-local-llm-server-build' }, t('serverBuild')),
+        React.createElement('select', {
+          id: 'dsh-local-llm-server-build',
+          value: serverBuild,
+          disabled: serverBusy || server?.running === true,
+          onChange: (event: React.ChangeEvent<HTMLSelectElement>) => setServerBuild(event.target.value as 'auto' | 'cuda' | 'cpu')
+        },
+        React.createElement('option', { value: 'auto' }, t('serverBuildAuto')),
+        React.createElement('option', { value: 'cuda' }, t('serverBuildCuda')),
+        React.createElement('option', { value: 'cpu' }, t('serverBuildCpu'))),
         serverBusy && React.createElement('div', { className: 'server-progress' },
           React.createElement('div', { className: 'server-progress-label' }, t('percent', { value: String(Math.round(serverProgress)) })),
           React.createElement('div', { className: 'progress-bar' },
             React.createElement('div', { className: 'progress-fill', style: { width: `${serverProgress}%` } }))),
         React.createElement('div', { className: 'server-buttons' },
-          !server?.installed && React.createElement('button', { type: 'button', onClick: () => void installServer(), disabled: serverBusy, className: 'btn-download' },
-            serverBusy ? `⏳ ${t('installingServer')}` : `⬇ ${t('installServer')}`),
+          React.createElement('button', { type: 'button', onClick: () => void installServer(), disabled: serverBusy || server?.running === true, className: 'btn-download' },
+            serverBusy ? `⏳ ${t('installingServer')}` : `⬇ ${server?.installed ? t('switchServerBuild') : t('installServer')}`),
           server?.installed && React.createElement('button', { type: 'button', onClick: () => void toggleServer(), disabled: serverBusy, className: server.running ? 'btn-stop' : 'btn-download' },
             server.running ? `■ ${t('stop')}` : `▶ ${t('start')}`))),
       React.createElement('div', { className: 'models-list' },

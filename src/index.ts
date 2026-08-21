@@ -311,9 +311,14 @@ export function apply(ctx: PluginContext, config: Config) {
     sendJson(res, 200, server.getStatus())
   })
 
-  registerRoute('/api/local-llm/server/install', async (_req, res) => {
+  registerRoute('/api/local-llm/server/install', async (req, res) => {
     try {
-      sendJson(res, 200, await server.install(progress => {
+      const body = await readJson(req)
+      const requestedBuild = body.build
+      if (requestedBuild !== undefined && requestedBuild !== 'auto' && requestedBuild !== 'cuda' && requestedBuild !== 'cpu') {
+        throw new Error('Server build must be auto, cuda, or cpu')
+      }
+      sendJson(res, 200, await server.install(requestedBuild as ServerBuild | undefined, progress => {
         const event = `data: ${JSON.stringify({ type: 'server', progress })}\n\n`
         for (const client of progressClients) client.write(event)
       }))

@@ -13,6 +13,7 @@ export interface ServerStatus {
   pid?: number
   version?: string
   contextSize?: number
+  build?: ServerBuild
   error?: string
 }
 
@@ -34,7 +35,7 @@ export class ServerManager {
   private readonly contextSize: number
   private readonly autoContextSize: boolean
   private readonly serverUrl: string
-  private readonly serverBuild: ServerBuild
+  private serverBuild: ServerBuild
   private process: ChildProcess | undefined
   private lastError: string | undefined
   private activeContextSize: number | undefined
@@ -60,16 +61,24 @@ export class ServerManager {
       ...(this.process?.pid === undefined ? {} : { pid: this.process.pid }),
       ...(this.readVersion() === undefined ? {} : { version: this.readVersion() }),
       ...(this.activeContextSize === undefined ? {} : { contextSize: this.activeContextSize }),
+      build: this.serverBuild,
       ...(this.lastError === undefined ? {} : { error: this.lastError }),
     }
   }
 
-  async install(onProgress?: (progress: number) => void): Promise<ServerStatus> {
-    if (this.findExecutable() !== undefined) return this.getStatus()
+  async install(build = this.serverBuild, onProgress?: (progress: number) => void): Promise<ServerStatus> {
+    if (build !== this.serverBuild && this.process?.exitCode === null) this.stop()
+    if (this.findExecutable() !== undefined && build === this.serverBuild) return this.getStatus()
     try {
+      if (build !== this.serverBuild && this.findExecutable() !== undefined) {
+        fs.rmSync(this.serverDir, { recursive: true, force: true })
+        fs.mkdirSync(this.serverDir, { recursive: true })
+        this.lastError = undefined
+      }
+      this.serverBuild = build
       const asset = this.serverUrl
         ? { name: path.basename(new URL(this.serverUrl).pathname), browser_download_url: this.serverUrl }
-        : await this.findReleaseAsset()
+        : await this.findReleaseAsset(build)
       const archivePath = path.join(this.serverDir, asset.name || 'llama-server-download')
       await this.download(asset.browser_download_url, archivePath, onProgress)
       await this.extract(archivePath)
@@ -139,7 +148,7 @@ export class ServerManager {
     return this.getStatus()
   }
 
-  private async findReleaseAsset(): Promise<ReleaseAsset> {
+  private async findReleaseAsset(build = this.serverBuild): Promise<ReleaseAsset> {
     const release = await this.requestJson<ReleaseInfo>(GITHUB_RELEASES_URL)
     const platform = process.platform === 'win32' ? 'win' : process.platform
     const architecture = process.arch === 'x64' ? 'x64' : process.arch
@@ -153,13 +162,13 @@ export class ServerManager {
 
     const cudaCandidates = candidates.filter(candidate => candidate.name.toLowerCase().includes('cuda'))
     const cpuCandidates = candidates.filter(candidate => !candidate.name.toLowerCase().includes('cuda'))
-    const asset = this.serverBuild === 'cuda'
+    const asset = build === 'cuda'
       ? cudaCandidates[0]
-      : this.serverBuild === 'cpu'
+      : build === 'cpu'
         ? cpuCandidates[0]
         : cudaCandidates[0] ?? cpuCandidates[0]
     if (!asset) {
-      if (this.serverBuild === 'cuda') {
+      if (build === 'cuda') {
         throw new Error(`No CUDA llama-server archive found for ${platform}/${architecture}. Build llama.cpp with CUDA manually or choose the automatic/CPU build.`)
       }
       throw new Error(`No llama-server archive found for ${platform}/${architecture}`)
