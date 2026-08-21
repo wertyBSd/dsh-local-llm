@@ -38,6 +38,11 @@ type ModelCapabilities = {
   vision: boolean
 }
 
+type ModelCatalogEntry = ModelCapabilities & {
+  name: string
+  size: string
+}
+
 type Locale = 'en' | 'ru' | 'zh' | 'fr' | 'es' | 'it' | 'pl' | 'de' | 'hi' | 'ja'
 
 const translations: Record<Locale, Record<string, string>> = { en, ru, zh, fr, es, it, pl, de, hi, ja }
@@ -57,7 +62,10 @@ function modelContextSize(modelName: string): number {
   if (Number.isInteger(stored) && stored >= 2048 && stored <= 131072) return stored
   const name = modelName.toLowerCase()
   if (name.includes('tinyllama')) return 2048
-  if (name.includes('phi-2') || name.includes('phi-3') || name.includes('phi-4')) return 8192
+  if (name.includes('meta-llama-3.1') || name.includes('phi-3.5')) return 131072
+  if (name.includes('mistral-7b') || name.includes('qwen-2.5')) return 32768
+  if (name.includes('llama-3-8b') || name.includes('gemma-2') || name.includes('phi-2') || name.includes('phi-3') || name.includes('phi-4')) return 8192
+  if (name.includes('deepseek-coder') || name.includes('starcoder2')) return 16384
   return 16384
 }
 
@@ -65,6 +73,7 @@ function modelCapabilities(modelName: string): ModelCapabilities {
   const name = modelName.toLowerCase()
   if (name.includes('tinyllama')) return { contextSize: 2048, tools: false, vision: false }
   if (name.includes('phi-2') || name.includes('phi-3') || name.includes('phi-4')) return { contextSize: 8192, tools: true, vision: false }
+  if (name.includes('starcoder2')) return { contextSize: 16384, tools: false, vision: false }
   return { contextSize: 16384, tools: true, vision: false }
 }
 
@@ -105,22 +114,22 @@ function createClientPlugin(moduleRequire: ModuleRequire) {
       setLocale(value)
       localStorage.setItem('dsh-local-llm-locale', value)
     }
-    const availableModels = [
-      ['mistral-7b-instruct-v0.3-Q4_K_M.gguf', '4.5 GB'],
-      ['llama-3-8b-instruct-q4_K_M.gguf', '4.7 GB'],
-      ['deepseek-coder-6.7b-instruct-q4_K_M.gguf', '4.2 GB'],
-      ['qwen-2.5-7b-instruct-q4_K_M.gguf', '4.3 GB'],
-      ['Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf', '4.9 GB'],
-      ['Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf', '4.7 GB'],
-      ['gemma-2-9b-it-Q4_K_M.gguf', '5.8 GB'],
-      ['Phi-3.5-mini-instruct-Q4_K_M.gguf', '2.2 GB'],
-      ['DeepSeek-Coder-V2-Lite-Instruct-Q4_K_M.gguf', '4.1 GB'],
-      ['StarCoder2-7B-Q4_K_M.gguf', '4.4 GB'],
-      ['TinyLlama-1.1B-Chat-v1.0-Q4_K_M.gguf', '0.7 GB']
+    const availableModels: ModelCatalogEntry[] = [
+      { name: 'mistral-7b-instruct-v0.3-Q4_K_M.gguf', size: '4.5 GB', contextSize: 32768, tools: true, vision: false },
+      { name: 'llama-3-8b-instruct-q4_K_M.gguf', size: '4.7 GB', contextSize: 8192, tools: true, vision: false },
+      { name: 'deepseek-coder-6.7b-instruct-q4_K_M.gguf', size: '4.2 GB', contextSize: 16384, tools: true, vision: false },
+      { name: 'qwen-2.5-7b-instruct-q4_K_M.gguf', size: '4.3 GB', contextSize: 32768, tools: true, vision: false },
+      { name: 'Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf', size: '4.9 GB', contextSize: 131072, tools: true, vision: false },
+      { name: 'Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf', size: '4.7 GB', contextSize: 32768, tools: true, vision: false },
+      { name: 'gemma-2-9b-it-Q4_K_M.gguf', size: '5.8 GB', contextSize: 8192, tools: true, vision: false },
+      { name: 'Phi-3.5-mini-instruct-Q4_K_M.gguf', size: '2.2 GB', contextSize: 131072, tools: true, vision: false },
+      { name: 'DeepSeek-Coder-V2-Lite-Instruct-Q4_K_M.gguf', size: '4.1 GB', contextSize: 16384, tools: true, vision: false },
+      { name: 'StarCoder2-7B-Q4_K_M.gguf', size: '4.4 GB', contextSize: 16384, tools: false, vision: false },
+      { name: 'TinyLlama-1.1B-Chat-v1.0-Q4_K_M.gguf', size: '0.7 GB', contextSize: 2048, tools: false, vision: false }
     ]
-    const visibleModels = availableModels.filter(([name]) =>
-      !models.some(model => model.name === name)
-      && name.toLowerCase().includes(modelSearch.trim().toLowerCase()))
+    const visibleModels = availableModels.filter(model =>
+      !models.some(downloadedModel => downloadedModel.name === model.name)
+      && model.name.toLowerCase().includes(modelSearch.trim().toLowerCase()))
     const selectedModelDownloaded = models.some(model => model.name === selectedModel)
 
     const refreshModels = async () => {
@@ -337,7 +346,7 @@ function createClientPlugin(moduleRequire: ModuleRequire) {
           }
         }, visibleModels.length === 0
           ? React.createElement('option', { value: selectedModel }, t('allModelsDownloaded'))
-          : visibleModels.map(([name, size]) => React.createElement('option', { key: name, value: name }, `${name} (${size})`))),
+          : visibleModels.map(model => React.createElement('option', { key: model.name, value: model.name }, `${model.name} (${model.size}) · ◫ ${model.contextSize} · ${model.tools ? '🛠' : '⊘'}`))),
         !selectedModelDownloaded && React.createElement('button', { onClick: handleDownload, disabled: downloading !== null, className: 'btn-download' },
           downloading === selectedModel ? `⏳ ${t('downloading')}` : `📥 ${t('download')}`)
       ),
@@ -410,8 +419,8 @@ function createClientPlugin(moduleRequire: ModuleRequire) {
             }, `${selectedModel === model.name ? '● ' : ''}${model.name}`),
             React.createElement('span', { className: 'model-capabilities', 'aria-label': t('modelCapabilities') },
               React.createElement('span', { title: t('contextCapability') }, `◫ ${modelContextSize(model.name)}`),
-              React.createElement('span', { title: t('toolsCapability') }, modelCapabilities(model.name).tools ? '🛠' : '⊘'),
-              React.createElement('span', { title: t('visionCapability') }, modelCapabilities(model.name).vision ? '◉' : '⊘')),
+              React.createElement('span', { title: t('toolsCapability') }, (availableModels.find(entry => entry.name === model.name)?.tools ?? modelCapabilities(model.name).tools) ? '🛠' : '⊘'),
+              React.createElement('span', { title: t('visionCapability') }, (availableModels.find(entry => entry.name === model.name)?.vision ?? modelCapabilities(model.name).vision) ? '◉' : '⊘')),
             React.createElement('span', { className: 'model-size' }, `${(model.size / (1024 * 1024 * 1024)).toFixed(2)} GB`),
             React.createElement('button', { onClick: () => void handleDelete(model.name), className: 'btn-delete' }, `🗑️ ${t('delete')}`))))
       )
