@@ -46,6 +46,15 @@ function text(locale: Locale, key: string, values: Record<string, string> = {}):
   return Object.entries(values).reduce((result, [name, value]) => result.replace(`{${name}}`, value), translations[locale][key] || translations.en[key] || key)
 }
 
+function modelContextSize(modelName: string): number {
+  const stored = Number(localStorage.getItem(`dsh-local-llm-context:${modelName}`))
+  if (Number.isInteger(stored) && stored >= 2048 && stored <= 131072) return stored
+  const name = modelName.toLowerCase()
+  if (name.includes('tinyllama')) return 2048
+  if (name.includes('phi-2') || name.includes('phi-3') || name.includes('phi-4')) return 8192
+  return 16384
+}
+
 async function responseError(response: Response, fallback: string): Promise<Error> {
   try {
     const body = await response.json() as { error?: unknown }
@@ -231,6 +240,7 @@ function createClientPlugin(moduleRequire: ModuleRequire) {
       }
       setSelectedContextSize(contextSize)
       localStorage.setItem(`dsh-local-llm-context:${url}`, String(contextSize))
+      localStorage.setItem(`dsh-local-llm-context:${new URL(url).pathname.split('/').pop() || url}`, String(contextSize))
       setCustomModelUrl('')
       void handleDownloadFor(url)
     }
@@ -335,6 +345,7 @@ function createClientPlugin(moduleRequire: ModuleRequire) {
           'aria-label': t('contextSize'),
           onChange: (event: React.ChangeEvent<HTMLInputElement>) => setCustomContextSize(event.target.value)
         }),
+        React.createElement('span', { className: 'context-size-hint' }, t('contextSizeHint')),
         React.createElement('button', {
           type: 'button',
           onClick: handleCustomDownload,
@@ -384,7 +395,7 @@ function createClientPlugin(moduleRequire: ModuleRequire) {
               onClick: () => setSelectedModel(model.name),
               title: selectedModel === model.name ? t('selectedModel') : t('selectModel')
             }, `${selectedModel === model.name ? '● ' : ''}${model.name}`),
-            React.createElement('span', { className: 'model-size' }, `${(model.size / (1024 * 1024 * 1024)).toFixed(2)} GB`),
+            React.createElement('span', { className: 'model-size' }, `${t('modelContext', { value: String(modelContextSize(model.name)) })} · ${(model.size / (1024 * 1024 * 1024)).toFixed(2)} GB`),
             React.createElement('button', { onClick: () => void handleDelete(model.name), className: 'btn-delete' }, `🗑️ ${t('delete')}`))))
       )
     )

@@ -17,6 +17,8 @@
   "allModelsDownloaded": "Alle integrierten Modelle sind heruntergeladen",
   "contextSize": "Kontextgröße",
   "contextSizeError": "Die Kontextgröße muss eine ganze Zahl zwischen 2048 und 131072 sein",
+  "contextSizeHint": "Token",
+  "modelContext": "Kontext: {value}",
   "running": "Läuft",
   "installedStopped": "Installiert, angehalten",
   "notInstalled": "Nicht installiert",

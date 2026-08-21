@@ -17,6 +17,8 @@
   "allModelsDownloaded": "Todos los modelos integrados están descargados",
   "contextSize": "Tamaño del contexto",
   "contextSizeError": "El tamaño del contexto debe ser un entero entre 2048 y 131072",
+  "contextSizeHint": "tokens",
+  "modelContext": "Contexto: {value}",
   "running": "En ejecución",
   "installedStopped": "Instalado, detenido",
   "notInstalled": "No instalado",

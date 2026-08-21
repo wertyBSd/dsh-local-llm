@@ -17,6 +17,8 @@
   "allModelsDownloaded": "Все встроенные модели уже скачаны",
   "contextSize": "Размер контекста",
   "contextSizeError": "Размер контекста должен быть целым числом от 2048 до 131072",
+  "contextSizeHint": "токенов",
+  "modelContext": "Контекст: {value}",
   "running": "Запущен",
   "installedStopped": "Установлен, остановлен",
   "notInstalled": "Не установлен",

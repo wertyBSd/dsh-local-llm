@@ -17,6 +17,8 @@
   "allModelsDownloaded": "所有内置模型均已下载",
   "contextSize": "上下文大小",
   "contextSizeError": "上下文大小必须是 2048 到 131072 之间的整数",
+  "contextSizeHint": "令牌",
+  "modelContext": "上下文：{value}",
   "running": "运行中",
   "installedStopped": "已安装，已停止",
   "notInstalled": "未安装",

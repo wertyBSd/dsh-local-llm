@@ -17,6 +17,8 @@
   "allModelsDownloaded": "Tous les modèles intégrés sont téléchargés",
   "contextSize": "Taille du contexte",
   "contextSizeError": "La taille du contexte doit être un entier entre 2048 et 131072",
+  "contextSizeHint": "jetons",
+  "modelContext": "Contexte : {value}",
   "running": "En cours d'exécution",
   "installedStopped": "Installé, arrêté",
   "notInstalled": "Non installé",

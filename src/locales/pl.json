@@ -17,6 +17,8 @@
   "allModelsDownloaded": "Wszystkie wbudowane modele są pobrane",
   "contextSize": "Rozmiar kontekstu",
   "contextSizeError": "Rozmiar kontekstu musi być liczbą całkowitą od 2048 do 131072",
+  "contextSizeHint": "tokenów",
+  "modelContext": "Kontekst: {value}",
   "running": "Uruchomiony",
   "installedStopped": "Zainstalowany, zatrzymany",
   "notInstalled": "Niezainstalowany",

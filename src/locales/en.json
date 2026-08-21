@@ -17,6 +17,8 @@
   "allModelsDownloaded": "All built-in models are downloaded",
   "contextSize": "Context size",
   "contextSizeError": "Context size must be an integer between 2048 and 131072",
+  "contextSizeHint": "tokens",
+  "modelContext": "Context: {value}",
   "running": "Running",
   "installedStopped": "Installed, stopped",
   "notInstalled": "Not installed",
